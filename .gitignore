@@ -1,0 +1,9 @@
+# Fichiers Terraform à ne pas versionner
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+*.tfplan
+
+# Variables sensibles (contient le token GitHub !)
+terraform.tfvars

@@ -44,6 +44,16 @@ resource "github_branch_protection" "main" {
 }
 
 # -------------------------------------------------------
+# Collaborateurs du repository
+# -------------------------------------------------------
+resource "github_repository_collaborator" "collaborators" {
+  for_each   = var.collaborators
+  repository = github_repository.repo.name
+  username   = each.key
+  permission = each.value
+}
+
+# -------------------------------------------------------
 # Workflow GitHub Actions CI exemple
 # -------------------------------------------------------
 resource "github_repository_file" "ci_workflow" {

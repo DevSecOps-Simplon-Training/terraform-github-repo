@@ -25,3 +25,9 @@ variable "gitignore_template" {
   type        = string
   default     = "Terraform"
 }
+
+variable "collaborators" {
+  description = "Map des collaborateurs GitHub : username => permission (pull, push, maintain, triage, admin)"
+  type        = map(string)
+  default     = {}
+}

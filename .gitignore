@@ -7,3 +7,6 @@
 
 # Variables sensibles (contient le token GitHub !)
 terraform.tfvars
+
+# Claude Code local settings
+.claude/

@@ -10,3 +10,6 @@ terraform.tfvars
 
 # Claude Code local settings
 .claude/
+
+# Liste locale des collaborateurs (à copier dans GitHub Actions Variables)
+collaborators.txt

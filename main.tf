@@ -1,50 +1,50 @@
 # -------------------------------------------------------
-# Repository GitHub
+# GitHub Repository
 # -------------------------------------------------------
 resource "github_repository" "repo" {
   name        = var.repo_name
   description = var.repo_description
   visibility  = "public"
 
-  # Initialise le repo avec un commit vide (nécessaire pour README et branch protection)
+  # Initialize with an empty commit (required for README and branch protection)
   auto_init = true
 
-  # Ajoute automatiquement un fichier .gitignore depuis les templates GitHub
+  # Automatically add a .gitignore file from GitHub templates
   gitignore_template = var.gitignore_template
 
   has_issues   = true
   has_projects = false
   has_wiki     = false
 
-  # Supprime les branches de fusion automatiquement après merge d'une PR
+  # Automatically delete merged branches after a PR is merged
   delete_branch_on_merge = true
 }
 
 # -------------------------------------------------------
-# Protection de la branche main
+# Main branch protection
 # -------------------------------------------------------
 resource "github_branch_protection" "main" {
   repository_id = github_repository.repo.node_id
   pattern       = "main"
 
-  # Exige au moins une review approuvée avant de merger
+  # Require at least one approved review before merging
   required_pull_request_reviews {
     required_approving_review_count = 1
     dismiss_stale_reviews           = true
   }
 
-  # Interdit les push directs sur main (même pour les admins)
+  # Block direct pushes to main (even for admins)
   enforce_admins = false
 
-  # Empêche les force push sur main
+  # Prevent force pushes to main
   allows_force_pushes = false
 
-  # Empêche la suppression de la branche main
+  # Prevent deletion of the main branch
   allows_deletions = false
 }
 
 # -------------------------------------------------------
-# Collaborateurs du repository
+# Repository collaborators
 # -------------------------------------------------------
 resource "github_repository_collaborator" "collaborators" {
   for_each   = var.collaborators
@@ -54,7 +54,7 @@ resource "github_repository_collaborator" "collaborators" {
 }
 
 # -------------------------------------------------------
-# Workflow GitHub Actions CI exemple
+# Example GitHub Actions CI workflow
 # -------------------------------------------------------
 resource "github_repository_file" "ci_workflow" {
   repository          = github_repository.repo.name
@@ -77,10 +77,10 @@ resource "github_repository_file" "ci_workflow" {
         runs-on: ubuntu-latest
 
         steps:
-          - name: Checkout du code
+          - name: Checkout code
             uses: actions/checkout@v4
 
-          - name: Exemple d'étape
-            run: echo "Ajoute tes étapes de build/test ici !"
+          - name: Example step
+            run: echo "Add your build/test steps here!"
   EOT
 }

@@ -1,6 +1,6 @@
 # Terraform GitHub Repository Factory
 
-Terraform module that provisions a GitHub repository with sane defaults and branch protection, triggered via a GitHub Actions workflow dispatch.
+Terraform module that provisions a GitHub repository with sane defaults and branch protection, triggered via GitHub Actions workflow dispatch.
 
 ## What it does
 
@@ -15,38 +15,79 @@ Terraform module that provisions a GitHub repository with sane defaults and bran
 - Injects a starter CI workflow (`.github/workflows/ci.yml`) into the created repository
 - Automatically deletes merged feature branches
 
+## Typical workflow
+
+```
+1. Run "Create GitHub Repository" → repository is created, no one has access yet
+2. Push your content to the new repository
+3. Run "Share GitHub Repository" → collaborators receive their invitation
+```
+
+This two-step approach ensures collaborators only get access once the repository content is ready.
+
 ## Project structure
 
 ```
 .
-├── main.tf                  # GitHub repository and branch protection resources
+├── main.tf                  # GitHub repository, branch protection and collaborator resources
 ├── variables.tf             # Input variable declarations
 ├── outputs.tf               # Repository URLs and full name outputs
 ├── providers.tf             # Terraform and GitHub provider configuration
 ├── terraform.tfvars.example # Example variables file (copy to terraform.tfvars locally)
 ├── .terraform.lock.hcl      # Provider version lock file
 └── .github/
+    ├── dependabot.yml       # Automated dependency updates (Actions + Terraform, weekly)
     └── workflows/
-        └── terraform.yml    # GitHub Actions workflow (workflow_dispatch)
+        ├── create-repo.yml         # Create a repository without adding collaborators
+        ├── share-repo.yml          # Add collaborators to an existing repository
+        └── terraform-pr-checks.yml # PR quality and security checks
 ```
 
-## GitHub Actions usage
+## GitHub Actions workflows
 
-The workflow is triggered manually from **Actions > Create GitHub Repository with Terraform > Run workflow**.
+### Create a repository — `create-repo.yml`
+
+Triggered manually from **Actions > Create GitHub Repository with Terraform > Run workflow**.
+
+Collaborators are never added at this stage (`collaborators = {}`).
 
 | Input | Required | Description |
 |-------|----------|-------------|
 | `repo_name` | Yes | Name of the repository to create |
 | `repo_description` | No | Short description of the repository |
 
-### Required GitHub Secrets
+### Share a repository — `share-repo.yml`
+
+Triggered manually from **Actions > Share GitHub Repository > Run workflow** once the repository content is ready.
+
+Uses the GitHub API directly — no Terraform state required.
+
+| Input | Required | Description |
+|-------|----------|-------------|
+| `repo_name` | Yes | Name of the repository to share |
+| `collaborators` | No | `user1:push,user2:admin` — defaults to the `DEFAULT_COLLABORATORS` variable if empty |
+
+### PR checks — `terraform-pr-checks.yml`
+
+Runs automatically on every pull request that modifies `.tf` or workflow files.
+
+| Job | Tools | Blocks merge? |
+|-----|-------|---------------|
+| Format & Validate | `terraform fmt`, `terraform validate`, tflint | Yes |
+| Security | Checkov (SARIF → Security tab) | No (`soft_fail: true`) |
+| Plan | `terraform plan` posted as a PR comment | No (runs after Format & Validate) |
+
+## Required secrets and variables
 
 Configure these in **Settings > Secrets and variables > Actions**:
 
-| Secret | Description |
-|--------|-------------|
-| `GH_TOKEN` | GitHub Personal Access Token with `repo` and `workflow` scopes |
-| `GH_OWNER` | Your GitHub username or organization name |
+| Name | Type | Description |
+|------|------|-------------|
+| `GH_TOKEN` | Secret | GitHub Personal Access Token with `repo` and `workflow` scopes |
+| `GH_OWNER` | Secret | Your GitHub username or organization name |
+| `DEFAULT_COLLABORATORS` | Variable | Default collaborators list: `user1:push,user2:admin` |
+
+> **Note:** `DEFAULT_COLLABORATORS` is a **Variable** (plain text), not a Secret. Store it under the **Variables** tab, not Secrets.
 
 ## Local usage
 
@@ -62,6 +103,7 @@ Configure these in **Settings > Secrets and variables > Actions**:
    repo_name          = "my-new-repo"
    repo_description   = "My project description"
    gitignore_template = "Terraform"
+   collaborators      = { "user1" = "push", "user2" = "admin" }
    ```
 
 3. Initialize, plan, and apply:
@@ -80,6 +122,7 @@ Configure these in **Settings > Secrets and variables > Actions**:
 | `repo_name` | `string` | — | Name of the repository to create |
 | `repo_description` | `string` | `""` | Repository description |
 | `gitignore_template` | `string` | `"Terraform"` | GitHub `.gitignore` template name |
+| `collaborators` | `map(string)` | `{}` | Collaborators map (local use only — the workflow uses `DEFAULT_COLLABORATORS`) |
 
 ## Outputs
 

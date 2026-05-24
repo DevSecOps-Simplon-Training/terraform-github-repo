@@ -13,11 +13,6 @@ on:
         required: false
         type: string
         default: ""
-      collaborators:
-        description: "Collaborators override — format: user1:push,user2:admin (empty = use DEFAULT_COLLABORATORS variable)"
-        required: false
-        type: string
-        default: ""
 
 # Pass secrets and workflow inputs as Terraform variables
 env:
@@ -26,11 +21,15 @@ env:
   TF_VAR_gitignore_template: "Terraform"
   TF_VAR_repo_name: ${{ inputs.repo_name }}
   TF_VAR_repo_description: ${{ inputs.repo_description }}
+  TF_VAR_collaborators: "{}"
 
 jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -40,20 +39,6 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "~> 1.3"
-
-      # Convert "user1:push,user2:admin" (input or DEFAULT_COLLABORATORS variable) to JSON map for Terraform
-      - name: Parse collaborators
-        run: |
-          RAW="${{ inputs.collaborators }}"
-          if [ -z "$RAW" ]; then
-            RAW="${{ vars.DEFAULT_COLLABORATORS }}"
-          fi
-          if [ -z "$RAW" ]; then
-            echo 'TF_VAR_collaborators={}' >> "$GITHUB_ENV"
-          else
-            JSON=$(echo "$RAW" | python3 -c "import json,sys;pairs=[p.strip().split(':',1) for p in sys.stdin.read().strip().split(',') if ':' in p.strip()];print(json.dumps({p[0].strip():p[1].strip() for p in pairs}))")
-            echo "TF_VAR_collaborators=$JSON" >> "$GITHUB_ENV"
-          fi
 
       # Download providers and initialize the working directory
       - name: Terraform Init
@@ -71,6 +56,6 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -no-color
 
-      # Apply changes and create the repository
+      # Apply changes and create the repository (without collaborators)
       - name: Terraform Apply
         run: terraform apply -auto-approve -no-color

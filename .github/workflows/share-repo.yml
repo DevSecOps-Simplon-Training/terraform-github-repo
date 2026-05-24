@@ -15,7 +15,7 @@ on:
         default: ""
 
 jobs:
-  share:
+  share-repo:
     name: Add Collaborators
     runs-on: ubuntu-latest
 

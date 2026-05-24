@@ -1,0 +1,49 @@
+name: Share GitHub Repository
+run-name: "Share repo '${{ inputs.repo_name }}' with collaborators"
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: "Name of the repository to share"
+        required: true
+        type: string
+      collaborators:
+        description: "Collaborators — format: user1:push,user2:admin (empty = use DEFAULT_COLLABORATORS variable)"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  share:
+    name: Add Collaborators
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: none
+
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      OWNER: ${{ secrets.GH_OWNER }}
+
+    steps:
+      - name: Add collaborators via GitHub API
+        run: |
+          RAW="${{ inputs.collaborators }}"
+          if [ -z "$RAW" ]; then
+            RAW="${{ vars.DEFAULT_COLLABORATORS }}"
+          fi
+          if [ -z "$RAW" ]; then
+            echo "No collaborators specified and DEFAULT_COLLABORATORS is empty — nothing to do."
+            exit 0
+          fi
+          IFS=',' read -ra PAIRS <<< "$RAW"
+          for pair in "${PAIRS[@]}"; do
+            USER=$(echo "$pair" | cut -d: -f1 | xargs)
+            PERM=$(echo "$pair" | cut -d: -f2 | xargs)
+            echo "Adding $USER with permission '$PERM'..."
+            gh api --method PUT \
+              "/repos/$OWNER/${{ inputs.repo_name }}/collaborators/$USER" \
+              -f permission="$PERM"
+            echo "  -> $USER invited."
+          done
